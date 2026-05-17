@@ -8,7 +8,11 @@ import '../widgets/glass_header_card.dart';
 import '../widgets/metric_tile.dart';
 import '../widgets/property_summary_card.dart';
 import '../widgets/section_heading.dart';
+import 'documents_screen.dart';
 import 'property_detail_screen.dart';
+import 'property_form_screen.dart';
+import 'tenants_screen.dart';
+import 'utilities_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key, required this.snapshot});
@@ -60,8 +64,9 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Icon(
-                      Icons.notifications_none_rounded,
+                    IconButton(
+                      onPressed: () => _openPropertyForm(context),
+                      icon: const Icon(Icons.add_business_rounded),
                       color: AppTheme.primary,
                     ),
                   ],
@@ -129,10 +134,10 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: MetricTile(
                         label: 'Documents',
-                        value: '18 archived',
+                        value: '${snapshot.documents.length} archived',
                         tone: AppTheme.primary,
                         icon: Icons.description_outlined,
                       ),
@@ -156,28 +161,38 @@ class DashboardScreen extends StatelessWidget {
                 }),
                 const SizedBox(height: 12),
                 const SectionHeading(
-                  title: 'Utilities and workflow',
-                  actionLabel: 'Optimized for offline use',
+                  title: 'Operations',
+                  actionLabel: 'Offline modules',
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuickActionCard(
-                        icon: Icons.bolt_rounded,
-                        title: 'Electricity',
-                        subtitle: 'Meter readings and tenant usage snapshots',
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _QuickActionCard(
-                        icon: Icons.wifi_rounded,
-                        title: 'Internet',
-                        subtitle: 'Track bundles, shared plans, and due cycles',
-                      ),
-                    ),
-                  ],
+                _QuickActionCard(
+                  icon: Icons.people_alt_outlined,
+                  title: 'Tenants',
+                  subtitle:
+                      'Manage ${snapshot.tenants.length} active tenants and contact records.',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TenantsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _QuickActionCard(
+                  icon: Icons.bolt_rounded,
+                  title: 'Utilities',
+                  subtitle:
+                      '${snapshot.utilityRecords.length} records with meter logs and cost history.',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const UtilitiesScreen()),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _QuickActionCard(
+                  icon: Icons.folder_copy_outlined,
+                  title: 'Documents',
+                  subtitle:
+                      '${snapshot.documents.length} agreements and proofs in local vault.',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+                  ),
                 ),
               ]),
             ),
@@ -187,10 +202,16 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _openPropertyForm(BuildContext context) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const PropertyFormScreen()));
+  }
+
   void _openProperty(BuildContext context, RentalProperty property) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PropertyDetailScreen(property: property),
+        builder: (_) => PropertyDetailScreen(propertyId: property.id),
       ),
     );
   }
@@ -201,49 +222,62 @@ class _QuickActionCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF141B2B).withValues(alpha: 0.05),
-            blurRadius: 26,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceLow,
-              borderRadius: BorderRadius.circular(14),
+    return InkWell(
+      borderRadius: BorderRadius.circular(26),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF141B2B).withValues(alpha: 0.05),
+              blurRadius: 26,
+              offset: const Offset(0, 16),
             ),
-            child: Icon(icon, color: AppTheme.primary),
-          ),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(height: 1.45),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: AppTheme.primary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(height: 1.45),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppTheme.muted),
+          ],
+        ),
       ),
     );
   }

@@ -7,9 +7,16 @@ import '../models/property_models.dart';
 import 'status_badge.dart';
 
 class ReceivableCard extends StatelessWidget {
-  const ReceivableCard({super.key, required this.receivable});
+  const ReceivableCard({
+    super.key,
+    required this.receivable,
+    this.onPrimaryAction,
+    this.primaryActionLabel,
+  });
 
   final PaymentReceivable receivable;
+  final VoidCallback? onPrimaryAction;
+  final String? primaryActionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -103,13 +110,15 @@ class ReceivableCard extends StatelessWidget {
                 ),
               ),
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: onPrimaryAction,
                 icon: Icon(
                   isPaid
                       ? Icons.receipt_long_rounded
                       : Icons.notifications_none_rounded,
                 ),
-                label: Text(isPaid ? 'Receipt' : 'Remind'),
+                label: Text(
+                  primaryActionLabel ?? (isPaid ? 'Receipt' : 'Remind'),
+                ),
               ),
             ],
           ),

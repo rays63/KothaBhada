@@ -20,6 +20,27 @@ class RentalProperty {
   final double monthlyTarget;
   final double totalDue;
   final List<Room> rooms;
+
+  RentalProperty copyWith({
+    String? name,
+    String? address,
+    int? totalRooms,
+    int? occupiedRooms,
+    double? monthlyTarget,
+    double? totalDue,
+    List<Room>? rooms,
+  }) {
+    return RentalProperty(
+      id: id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      totalRooms: totalRooms ?? this.totalRooms,
+      occupiedRooms: occupiedRooms ?? this.occupiedRooms,
+      monthlyTarget: monthlyTarget ?? this.monthlyTarget,
+      totalDue: totalDue ?? this.totalDue,
+      rooms: rooms ?? this.rooms,
+    );
+  }
 }
 
 class Room {
@@ -44,10 +65,32 @@ class Room {
   final String note;
 }
 
+class TenantProfile {
+  const TenantProfile({
+    required this.id,
+    required this.roomId,
+    required this.propertyId,
+    required this.name,
+    required this.phone,
+    required this.moveInDate,
+    required this.emergencyContact,
+  });
+
+  final String id;
+  final String roomId;
+  final String propertyId;
+  final String name;
+  final String phone;
+  final DateTime moveInDate;
+  final String emergencyContact;
+}
+
 class PaymentReceivable {
   const PaymentReceivable({
     required this.id,
+    required this.propertyId,
     required this.propertyName,
+    required this.roomId,
     required this.roomLabel,
     required this.amount,
     required this.overdueLabel,
@@ -56,7 +99,9 @@ class PaymentReceivable {
   });
 
   final String id;
+  final String propertyId;
   final String propertyName;
+  final String roomId;
   final String roomLabel;
   final double amount;
   final String overdueLabel;
@@ -81,6 +126,166 @@ class UtilityUsage {
   final String propertyName;
   final double electricity;
   final double water;
+}
+
+enum UtilityType { electricity, internet, water, maintenance, other }
+
+class UtilityRecord {
+  const UtilityRecord({
+    required this.id,
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.tenantName,
+    required this.type,
+    required this.meterReading,
+    required this.amount,
+    required this.note,
+    required this.imagePath,
+    required this.recordedAt,
+  });
+
+  final String id;
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String tenantName;
+  final UtilityType type;
+  final double? meterReading;
+  final double amount;
+  final String note;
+  final String? imagePath;
+  final DateTime recordedAt;
+}
+
+class DocumentRecord {
+  const DocumentRecord({
+    required this.id,
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.title,
+    required this.category,
+    required this.filePath,
+    required this.note,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String title;
+  final String category;
+  final String filePath;
+  final String note;
+  final DateTime createdAt;
+}
+
+class ActivityEntry {
+  const ActivityEntry({
+    required this.id,
+    required this.propertyId,
+    required this.title,
+    required this.detail,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String propertyId;
+  final String title;
+  final String detail;
+  final DateTime createdAt;
+}
+
+class PropertyDraft {
+  const PropertyDraft({
+    this.id,
+    required this.name,
+    required this.address,
+    required this.monthlyTarget,
+  });
+
+  final String? id;
+  final String name;
+  final String address;
+  final double monthlyTarget;
+}
+
+class RoomDraft {
+  const RoomDraft({
+    this.id,
+    required this.propertyId,
+    required this.label,
+    required this.tenantName,
+    required this.dueDay,
+    required this.monthlyRent,
+    required this.status,
+    required this.note,
+  });
+
+  final String? id;
+  final String propertyId;
+  final String label;
+  final String tenantName;
+  final int dueDay;
+  final double monthlyRent;
+  final PaymentStatus status;
+  final String note;
+}
+
+class UtilityRecordDraft {
+  const UtilityRecordDraft({
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.tenantName,
+    required this.type,
+    required this.meterReading,
+    required this.amount,
+    required this.note,
+    required this.imagePath,
+    required this.recordedAt,
+  });
+
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String tenantName;
+  final UtilityType type;
+  final double? meterReading;
+  final double amount;
+  final String note;
+  final String? imagePath;
+  final DateTime recordedAt;
+}
+
+class DocumentDraft {
+  const DocumentDraft({
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.title,
+    required this.category,
+    required this.filePath,
+    required this.note,
+  });
+
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String title;
+  final String category;
+  final String filePath;
+  final String note;
 }
 
 class AppPreferences {

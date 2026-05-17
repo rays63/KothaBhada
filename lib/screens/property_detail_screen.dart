@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../core/formatters/currency_formatter.dart';
 import '../core/theme/app_theme.dart';
 import '../models/payment_status.dart';
 import '../models/property_models.dart';
+import '../providers/app_controller.dart';
 import '../widgets/status_badge.dart';
+import 'documents_screen.dart';
+import 'history_screen.dart';
+import 'property_form_screen.dart';
+import 'room_form_screen.dart';
+import 'tenants_screen.dart';
+import 'utilities_screen.dart';
 
 class PropertyDetailScreen extends StatelessWidget {
-  const PropertyDetailScreen({super.key, required this.property});
+  const PropertyDetailScreen({super.key, required this.propertyId});
 
-  final RentalProperty property;
+  final String propertyId;
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = context.watch<AppController>().snapshot;
+    if (snapshot == null) return const Scaffold(body: SizedBox.shrink());
+    final property = snapshot.properties.firstWhere(
+      (item) => item.id == propertyId,
+      orElse: () => snapshot.properties.first,
+    );
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -35,18 +50,16 @@ class PropertyDetailScreen extends StatelessWidget {
                   ).textTheme.titleLarge?.copyWith(color: AppTheme.primary),
                 ),
                 const Spacer(),
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceHigh,
-                    borderRadius: BorderRadius.circular(21),
+                IconButton(
+                  onPressed: () => _editProperty(context, property),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppTheme.primary,
                   ),
-                  child: const Icon(Icons.person, color: AppTheme.primary),
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 18),
             Text(
               property.name,
               style: Theme.of(context).textTheme.headlineMedium,
@@ -67,13 +80,19 @@ class PropertyDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit Details'),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => _addRoom(context, property),
+                    icon: const Icon(Icons.add_business_rounded),
+                    label: const Text('Add Room'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(26),
               decoration: BoxDecoration(
@@ -134,7 +153,54 @@ class PropertyDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 22),
+            SizedBox(
+              height: 54,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _ShortcutPill(
+                    label: 'Tenants',
+                    icon: Icons.people_alt_outlined,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TenantsScreen(propertyId: property.id),
+                      ),
+                    ),
+                  ),
+                  _ShortcutPill(
+                    label: 'Utilities',
+                    icon: Icons.bolt_outlined,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            UtilitiesScreen(propertyId: property.id),
+                      ),
+                    ),
+                  ),
+                  _ShortcutPill(
+                    label: 'Documents',
+                    icon: Icons.description_outlined,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            DocumentsScreen(propertyId: property.id),
+                      ),
+                    ),
+                  ),
+                  _ShortcutPill(
+                    label: 'History',
+                    icon: Icons.history_rounded,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistoryScreen(propertyId: property.id),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -162,76 +228,82 @@ class PropertyDetailScreen extends StatelessWidget {
             ...property.rooms.map(
               (room) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF141B2B).withValues(alpha: 0.04),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDDE4FB),
-                          borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(26),
+                  onTap: () => _editRoom(context, property, room),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(26),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF141B2B,
+                          ).withValues(alpha: 0.04),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
                         ),
-                        child: Center(
-                          child: Text(
-                            room.label,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: AppTheme.primary),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDDE4FB),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Center(
+                            child: Text(
+                              room.label,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(color: AppTheme.primary),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              room.tenantName,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Rent due: ${room.dueDay}th of month',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              room.note,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                room.tenantName,
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Rent due: ${room.dueDay}th of month',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                room.note,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      StatusBadge(
-                        label: room.status == PaymentStatus.paid
-                            ? 'Paid'
-                            : room.status == PaymentStatus.partial
-                            ? 'Partial'
-                            : 'Due',
-                        background: room.status == PaymentStatus.paid
-                            ? const Color(0xFF7EF38B)
-                            : room.status == PaymentStatus.partial
-                            ? const Color(0xFFFFE0A8)
-                            : const Color(0xFFFFD3D3),
-                        foreground: room.status == PaymentStatus.paid
-                            ? const Color(0xFF106530)
-                            : room.status == PaymentStatus.partial
-                            ? const Color(0xFF915F00)
-                            : AppTheme.due,
-                      ),
-                    ],
+                        StatusBadge(
+                          label: room.status == PaymentStatus.paid
+                              ? 'Paid'
+                              : room.status == PaymentStatus.partial
+                              ? 'Partial'
+                              : 'Due',
+                          background: room.status == PaymentStatus.paid
+                              ? const Color(0xFF7EF38B)
+                              : room.status == PaymentStatus.partial
+                              ? const Color(0xFFFFE0A8)
+                              : const Color(0xFFFFD3D3),
+                          foreground: room.status == PaymentStatus.paid
+                              ? const Color(0xFF106530)
+                              : room.status == PaymentStatus.partial
+                              ? const Color(0xFF915F00)
+                              : AppTheme.due,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -240,9 +312,36 @@ class PropertyDetailScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => _addRoom(context, property),
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 34),
+      ),
+    );
+  }
+
+  Future<void> _editProperty(
+    BuildContext context,
+    RentalProperty property,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PropertyFormScreen(property: property)),
+    );
+  }
+
+  Future<void> _addRoom(BuildContext context, RentalProperty property) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => RoomFormScreen(property: property)),
+    );
+  }
+
+  Future<void> _editRoom(
+    BuildContext context,
+    RentalProperty property,
+    Room room,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RoomFormScreen(property: property, room: room),
       ),
     );
   }
@@ -293,6 +392,48 @@ class _StatBlock extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ShortcutPill extends StatelessWidget {
+  const _ShortcutPill({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLow,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: AppTheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: AppTheme.primary),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

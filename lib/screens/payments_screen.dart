@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../core/formatters/currency_formatter.dart';
 import '../core/theme/app_theme.dart';
+import '../models/payment_status.dart';
 import '../models/portfolio_snapshot.dart';
+import '../providers/app_controller.dart';
 import '../widgets/receivable_card.dart';
 
 class PaymentsScreen extends StatefulWidget {
@@ -19,9 +22,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = context.watch<AppController>().snapshot ?? widget.snapshot;
     final receivables = _showPending
-        ? widget.snapshot.pendingReceivables
-        : widget.snapshot.completedReceivables;
+        ? snapshot.pendingReceivables
+        : snapshot.completedReceivables;
 
     return SafeArea(
       bottom: false,
@@ -110,9 +114,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      CurrencyFormatter.nepali(
-                        widget.snapshot.totalOutstanding,
-                      ),
+                      CurrencyFormatter.nepali(snapshot.totalOutstanding),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(width: 10),
@@ -125,9 +127,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         color: const Color(0xFFA7F0B9),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
-                        '^ 12%',
-                        style: TextStyle(
+                      child: Text(
+                        '^ ${snapshot.pendingReceivables.length}',
+                        style: const TextStyle(
                           color: Color(0xFF115A2C),
                           fontWeight: FontWeight.w700,
                         ),
@@ -143,7 +145,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     fit: StackFit.expand,
                     children: [
                       CircularProgressIndicator(
-                        value: 0.72,
+                        value: snapshot.pendingReceivables.isEmpty
+                            ? 0
+                            : snapshot.pendingReceivables.length /
+                                  (snapshot.pendingReceivables.length +
+                                      snapshot.completedReceivables.length),
                         strokeWidth: 8,
                         strokeCap: StrokeCap.round,
                         backgroundColor: Colors.transparent,
@@ -174,11 +180,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: _showPending
+                    ? () => _remindAll(
+                        context,
+                        snapshot.pendingReceivables.length,
+                      )
+                    : null,
                 child: Text(
-                  _showPending ? 'Mark all as reminded' : 'View receipts',
-                  style: const TextStyle(
-                    color: AppTheme.primary,
+                  _showPending ? 'Mark all as reminded' : 'Receipts',
+                  style: TextStyle(
+                    color: _showPending ? AppTheme.primary : AppTheme.muted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -189,7 +200,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ...receivables.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: ReceivableCard(receivable: item),
+              child: ReceivableCard(
+                receivable: item,
+                primaryActionLabel: item.status == PaymentStatus.paid
+                    ? 'Receipt'
+                    : 'Mark Paid',
+                onPrimaryAction: () => item.status == PaymentStatus.paid
+                    ? _showReceipt(context)
+                    : _markPaid(context, item.id),
+              ),
             ),
           ),
           const SizedBox(height: 26),
@@ -225,25 +244,31 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     height: 1.55,
                   ),
                 ),
-                const SizedBox(height: 18),
-                const Row(
-                  children: [
-                    Text(
-                      'View automation settings',
-                      style: TextStyle(
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, color: AppTheme.primary),
-                  ],
-                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _markPaid(BuildContext context, String id) async {
+    await context.read<AppController>().markReceivablePaid(id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Payment marked as paid')));
+  }
+
+  void _remindAll(BuildContext context, int total) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reminder queued for $total tenants')),
+    );
+  }
+
+  void _showReceipt(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Receipt available in local documents')),
     );
   }
 }

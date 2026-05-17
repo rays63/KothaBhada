@@ -42,6 +42,13 @@ class AppController extends ChangeNotifier {
     });
   }
 
+  Future<void> deleteProperty(String propertyId) async {
+    await _runSaving(() async {
+      await _repository.deleteProperty(propertyId);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
   Future<void> saveRoom(RoomDraft draft) async {
     await _runSaving(() async {
       await _repository.saveRoom(draft);
@@ -63,9 +70,54 @@ class AppController extends ChangeNotifier {
     });
   }
 
+  Future<void> updateDocument(String documentId, DocumentDraft draft) async {
+    await _runSaving(() async {
+      await _repository.updateDocument(documentId, draft);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
+  Future<void> deleteDocument(String documentId) async {
+    await _runSaving(() async {
+      await _repository.deleteDocument(documentId);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
   Future<void> markReceivablePaid(String receivableId) async {
     await _runSaving(() async {
       await _repository.markReceivablePaid(receivableId);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
+  Future<void> recordPartialPayment(String receivableId, double amount) async {
+    await _runSaving(() async {
+      await _repository.recordPartialPayment(receivableId, amount);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
+  Future<void> saveElectricityReading(ElectricityReadingDraft draft) async {
+    await _runSaving(() async {
+      await _repository.saveElectricityReading(draft);
+      _snapshot = await _repository.loadSnapshot();
+    });
+  }
+
+  Future<List<ElectricityReading>> loadElectricityReadingsForRoom(
+    String roomId,
+  ) {
+    return _repository.loadElectricityReadingsForRoom(roomId);
+  }
+
+  Future<String> backupData() => _repository.backupData();
+
+  Future<String> exportData() => _repository.exportData();
+
+  Future<void> restoreData(String backupPath) async {
+    await _runSaving(() async {
+      await _repository.restoreData(backupPath);
       _snapshot = await _repository.loadSnapshot();
     });
   }

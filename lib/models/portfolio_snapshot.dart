@@ -5,6 +5,8 @@ class PortfolioSnapshot {
     required this.properties,
     required this.tenants,
     required this.revenue,
+    required this.billingCycles,
+    required this.payments,
     required this.utilityUsage,
     required this.utilityRecords,
     required this.documents,
@@ -17,6 +19,8 @@ class PortfolioSnapshot {
   final List<RentalProperty> properties;
   final List<TenantProfile> tenants;
   final List<MonthlyRevenuePoint> revenue;
+  final List<BillingCycle> billingCycles;
+  final List<PaymentRecord> payments;
   final List<UtilityUsage> utilityUsage;
   final List<UtilityRecord> utilityRecords;
   final List<DocumentRecord> documents;
@@ -35,13 +39,56 @@ class PortfolioSnapshot {
 
   double get occupancyRate => totalRooms == 0 ? 0 : occupiedRooms / totalRooms;
 
-  double get totalOutstanding =>
-      pendingReceivables.fold<double>(0, (sum, item) => sum + item.amount);
+  int get totalHouses => properties.length;
+
+  int get activeTenants => tenants.length;
+
+  DateTime get now => DateTime.now();
+
+  String get currentMonthLabel {
+    const months = [
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[now.month]} ${now.year}';
+  }
+
+  List<BillingCycle> get currentMonthCycles => billingCycles
+      .where(
+        (cycle) => cycle.cycleYear == now.year && cycle.cycleMonth == now.month,
+      )
+      .toList();
+
+  double get monthlyExpectedRevenue =>
+      currentMonthCycles.fold<double>(0, (sum, cycle) => sum + cycle.totalDue);
+
+  double get collectedRevenue =>
+      currentMonthCycles.fold<double>(0, (sum, cycle) => sum + cycle.totalPaid);
+
+  double get pendingRevenue => monthlyExpectedRevenue - collectedRevenue;
+
+  double get electricityDues => currentMonthCycles
+      .where((cycle) => cycle.status != BillingCycleStatus.paid)
+      .fold<double>(0, (sum, cycle) => sum + cycle.electricityDue);
+
+  double get utilityTotals =>
+      utilityRecords.fold<double>(0, (sum, item) => sum + item.amount);
+
+  double get totalOutstanding => pendingRevenue;
 
   double get currentRevenue {
-    if (revenue.isEmpty) return 0;
-    final currentIndex = revenue.length >= 4 ? 3 : revenue.length - 1;
-    return revenue[currentIndex].amount;
+    return collectedRevenue;
   }
 
   double get averageRent {
@@ -51,15 +98,14 @@ class PortfolioSnapshot {
     return total / rooms.length;
   }
 
-  double get netProfit => currentRevenue * 0.656;
+  double get netProfit => collectedRevenue * 0.656;
 
   int get paidRooms => properties
       .expand((property) => property.rooms)
       .where((room) => room.status.name == 'paid')
       .length;
 
-  int get dueRooms => properties
-      .expand((property) => property.rooms)
-      .where((room) => room.status.name != 'paid')
+  int get dueRooms => currentMonthCycles
+      .where((cycle) => cycle.status != BillingCycleStatus.paid)
       .length;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/formatters/currency_formatter.dart';
 import '../core/theme/app_theme.dart';
 import '../models/portfolio_snapshot.dart';
+import '../models/property_models.dart';
 import '../widgets/section_heading.dart';
 
 class AnalyticsScreen extends StatelessWidget {
@@ -12,9 +13,27 @@ class AnalyticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxRevenue = snapshot.revenue
-        .map((point) => point.amount)
-        .reduce((value, element) => value > element ? value : element);
+    final currentCycles = snapshot.currentMonthCycles;
+    final maxRevenue = snapshot.revenue.isEmpty
+        ? 1.0
+        : snapshot.revenue
+              .map((point) => point.amount)
+              .reduce((value, element) => value > element ? value : element);
+    final paidCount = currentCycles
+        .where((cycle) => cycle.status == BillingCycleStatus.paid)
+        .length;
+    final partialCount = currentCycles
+        .where((cycle) => cycle.status == BillingCycleStatus.partial)
+        .length;
+    final pendingCount = currentCycles
+        .where(
+          (cycle) =>
+              cycle.status == BillingCycleStatus.pending ||
+              cycle.status == BillingCycleStatus.overdue,
+        )
+        .length;
+    final topRooms = [...currentCycles]
+      ..sort((a, b) => b.totalPaid.compareTo(a.totalPaid));
 
     return SafeArea(
       bottom: false,
@@ -109,20 +128,20 @@ class AnalyticsScreen extends StatelessWidget {
             children: [
               _MetricCard(
                 label: 'TOTAL REVENUE',
-                value: CurrencyFormatter.nepali(snapshot.currentRevenue),
-                delta: '+12.5%',
+                value: CurrencyFormatter.nepali(snapshot.collectedRevenue),
+                delta: '${snapshot.activeTenants} active tenants',
                 icon: Icons.payments_outlined,
               ),
               _MetricCard(
                 label: 'AVG. RENT / ROOM',
                 value: CurrencyFormatter.nepali(snapshot.averageRent),
-                delta: '+2.1%',
+                delta: '${snapshot.totalRooms} total rooms',
                 icon: Icons.meeting_room_outlined,
               ),
               _MetricCard(
                 label: 'NET PROFIT',
                 value: CurrencyFormatter.nepali(snapshot.netProfit),
-                delta: '+8.4%',
+                delta: '${snapshot.currentMonthLabel} estimate',
                 icon: Icons.account_balance_wallet_outlined,
               ),
             ],
@@ -303,6 +322,78 @@ class AnalyticsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
+          const SectionHeading(title: 'Payment Trends'),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current Month Status Split',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 14),
+                _TrendRow(
+                  label: 'Paid',
+                  count: paidCount,
+                  total: currentCycles.length,
+                  color: const Color(0xFF18974A),
+                ),
+                const SizedBox(height: 8),
+                _TrendRow(
+                  label: 'Partial',
+                  count: partialCount,
+                  total: currentCycles.length,
+                  color: AppTheme.partial,
+                ),
+                const SizedBox(height: 8),
+                _TrendRow(
+                  label: 'Pending/Overdue',
+                  count: pendingCount,
+                  total: currentCycles.length,
+                  color: AppTheme.due,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          const SectionHeading(title: 'Top Revenue Rooms'),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              children: topRooms.take(5).map((cycle) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${cycle.propertyName} • ${cycle.roomLabel}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.nepali(cycle.totalPaid),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(color: AppTheme.primary),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 22),
           const SectionHeading(title: 'Utility Consumption'),
           const SizedBox(height: 14),
           Container(
@@ -338,14 +429,18 @@ class AnalyticsScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             Expanded(
-                              flex: usage.electricity.round(),
+                              flex: usage.electricity.round() <= 0
+                                  ? 1
+                                  : usage.electricity.round(),
                               child: Container(
                                 height: 10,
                                 color: AppTheme.primary,
                               ),
                             ),
                             Expanded(
-                              flex: usage.water.round(),
+                              flex: usage.water.round() <= 0
+                                  ? 1
+                                  : usage.water.round(),
                               child: Container(
                                 height: 10,
                                 color: AppTheme.secondary,
@@ -404,20 +499,55 @@ class _MetricCard extends StatelessWidget {
             children: [
               Text(
                 delta,
-                style: const TextStyle(
-                  color: Color(0xFF18974A),
-                  fontWeight: FontWeight.w700,
+                style: TextStyle(
+                  color: AppTheme.primary.withValues(alpha: 0.92),
+                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'from last month',
-                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TrendRow extends StatelessWidget {
+  const _TrendRow({
+    required this.label,
+    required this.count,
+    required this.total,
+    required this.color,
+  });
+
+  final String label;
+  final int count;
+  final int total;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = total <= 0 ? 0.0 : count / total;
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: ratio,
+              color: color,
+              backgroundColor: AppTheme.surfaceLow,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text('$count', style: Theme.of(context).textTheme.labelMedium),
+      ],
     );
   }
 }

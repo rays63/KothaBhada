@@ -7,8 +7,10 @@ import '../models/payment_status.dart';
 import '../models/property_models.dart';
 import '../providers/app_controller.dart';
 import '../widgets/status_badge.dart';
+import 'add_occupant_screen.dart';
 import 'documents_screen.dart';
 import 'history_screen.dart';
+import 'occupant_details_screen.dart';
 import 'property_form_screen.dart';
 import 'room_form_screen.dart';
 import 'tenants_screen.dart';
@@ -27,6 +29,9 @@ class PropertyDetailScreen extends StatelessWidget {
       (item) => item.id == propertyId,
       orElse: () => snapshot.properties.first,
     );
+    final vacantRooms = property.rooms
+        .where((room) => room.tenantName.trim().isEmpty)
+        .toList();
 
     return Scaffold(
       body: SafeArea(
@@ -50,12 +55,24 @@ class PropertyDetailScreen extends StatelessWidget {
                   ).textTheme.titleLarge?.copyWith(color: AppTheme.primary),
                 ),
                 const Spacer(),
-                IconButton(
-                  onPressed: () => _editProperty(context, property),
+                PopupMenuButton<String>(
                   icon: const Icon(
-                    Icons.edit_outlined,
+                    Icons.more_vert_rounded,
                     color: AppTheme.primary,
                   ),
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _editProperty(context, property);
+                      return;
+                    }
+                    if (value == 'delete') {
+                      _deleteProperty(context, property);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit House')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete House')),
+                  ],
                 ),
               ],
             ),
@@ -92,6 +109,20 @@ class PropertyDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
+            if (vacantRooms.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _addOccupant(context, property),
+                      icon: const Icon(Icons.person_add_alt_rounded),
+                      label: const Text('Add Occupant'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(26),
@@ -217,8 +248,7 @@ class PropertyDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 StatusBadge(
-                  label:
-                      '${property.rooms.where((room) => room.status != PaymentStatus.paid).length} Due',
+                  label: '${vacantRooms.length} Vacant',
                   background: const Color(0xFFFFD3D3),
                   foreground: AppTheme.due,
                 ),
@@ -269,7 +299,9 @@ class PropertyDetailScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                room.tenantName,
+                                room.tenantName.isEmpty
+                                    ? 'Vacant room'
+                                    : room.tenantName,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               const SizedBox(height: 4),
@@ -279,24 +311,32 @@ class PropertyDetailScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                room.note,
+                                room.note.isEmpty
+                                    ? 'Ready for occupancy'
+                                    : room.note,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                           ),
                         ),
                         StatusBadge(
-                          label: room.status == PaymentStatus.paid
+                          label: room.tenantName.isEmpty
+                              ? 'Vacant'
+                              : room.status == PaymentStatus.paid
                               ? 'Paid'
                               : room.status == PaymentStatus.partial
                               ? 'Partial'
                               : 'Due',
-                          background: room.status == PaymentStatus.paid
+                          background: room.tenantName.isEmpty
+                              ? const Color(0xFFDDE4FB)
+                              : room.status == PaymentStatus.paid
                               ? const Color(0xFF7EF38B)
                               : room.status == PaymentStatus.partial
                               ? const Color(0xFFFFE0A8)
                               : const Color(0xFFFFD3D3),
-                          foreground: room.status == PaymentStatus.paid
+                          foreground: room.tenantName.isEmpty
+                              ? AppTheme.primary
+                              : room.status == PaymentStatus.paid
                               ? const Color(0xFF106530)
                               : room.status == PaymentStatus.partial
                               ? const Color(0xFF915F00)
@@ -334,16 +374,68 @@ class PropertyDetailScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _addOccupant(
+    BuildContext context,
+    RentalProperty property,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AddOccupantScreen(property: property)),
+    );
+  }
+
   Future<void> _editRoom(
     BuildContext context,
     RentalProperty property,
     Room room,
   ) async {
+    if (room.tenantName.trim().isNotEmpty) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              OccupantDetailsScreen(propertyId: property.id, roomId: room.id),
+        ),
+      );
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RoomFormScreen(property: property, room: room),
       ),
     );
+  }
+
+  Future<void> _deleteProperty(
+    BuildContext context,
+    RentalProperty property,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete house?'),
+          content: Text(
+            'This will permanently remove ${property.name} and all related rooms, tenants, bills, and documents from local storage.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirm != true || !context.mounted) return;
+    await context.read<AppController>().deleteProperty(property.id);
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('House deleted successfully')));
   }
 }
 

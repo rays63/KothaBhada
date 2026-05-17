@@ -5,6 +5,7 @@ import '../core/formatters/currency_formatter.dart';
 import '../core/theme/app_theme.dart';
 import '../models/payment_status.dart';
 import '../models/portfolio_snapshot.dart';
+import '../models/property_models.dart';
 import '../providers/app_controller.dart';
 import '../widgets/receivable_card.dart';
 
@@ -26,6 +27,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final receivables = _showPending
         ? snapshot.pendingReceivables
         : snapshot.completedReceivables;
+    final expected = snapshot.monthlyExpectedRevenue;
+    final collected = snapshot.collectedRevenue;
+    final pending = snapshot.pendingRevenue;
+    final collectionRatio = expected <= 0
+        ? 0.0
+        : (collected / expected).clamp(0.0, 1.0).toDouble();
+    final collectionPercent = (collectionRatio * 100).round();
 
     return SafeArea(
       bottom: false,
@@ -103,7 +111,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Column(
               children: [
                 Text(
-                  'TOTAL OUTSTANDING',
+                  'MONTHLY COLLECTION',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppTheme.primary,
                     letterSpacing: 1.6,
@@ -114,7 +122,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      CurrencyFormatter.nepali(snapshot.totalOutstanding),
+                      CurrencyFormatter.nepali(collected),
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(width: 10),
@@ -128,7 +136,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        '^ ${snapshot.pendingReceivables.length}',
+                        '$collectionPercent%',
                         style: const TextStyle(
                           color: Color(0xFF115A2C),
                           fontWeight: FontWeight.w700,
@@ -145,25 +153,31 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     fit: StackFit.expand,
                     children: [
                       CircularProgressIndicator(
-                        value: snapshot.pendingReceivables.isEmpty
-                            ? 0
-                            : snapshot.pendingReceivables.length /
-                                  (snapshot.pendingReceivables.length +
-                                      snapshot.completedReceivables.length),
+                        value: collectionRatio,
                         strokeWidth: 8,
                         strokeCap: StrokeCap.round,
                         backgroundColor: Colors.transparent,
-                        color: AppTheme.due,
+                        color: AppTheme.secondary,
                       ),
-                      const Center(
-                        child: Icon(
-                          Icons.priority_high_rounded,
-                          color: AppTheme.due,
-                          size: 34,
+                      Center(
+                        child: Text(
+                          '$collectionPercent%',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Pending ${CurrencyFormatter.nepali(pending)} of ${CurrencyFormatter.nepali(expected)}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                 ),
               ],
             ),
@@ -204,10 +218,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 receivable: item,
                 primaryActionLabel: item.status == PaymentStatus.paid
                     ? 'Receipt'
-                    : 'Mark Paid',
+                    : 'Record Payment',
                 onPrimaryAction: () => item.status == PaymentStatus.paid
                     ? _showReceipt(context)
-                    : _markPaid(context, item.id),
+                    : _openPaymentActionSheet(context, item),
               ),
             ),
           ),
@@ -253,11 +267,143 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Future<void> _markPaid(BuildContext context, String id) async {
-    await context.read<AppController>().markReceivablePaid(id);
-    if (!context.mounted) return;
+    final appController = context.read<AppController>();
+    await appController.markReceivablePaid(id);
+    if (!mounted) return;
     ScaffoldMessenger.of(
-      context,
+      this.context,
     ).showSnackBar(const SnackBar(content: Text('Payment marked as paid')));
+  }
+
+  Future<void> _openPaymentActionSheet(
+    BuildContext context,
+    PaymentReceivable item,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${item.propertyName} • Room ${item.roomLabel}',
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Pending ${CurrencyFormatter.nepali(item.amount)}',
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.task_alt_rounded,
+                    color: AppTheme.primary,
+                  ),
+                  title: const Text('Mark full as paid'),
+                  subtitle: const Text('Close this month bill for this room'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _markPaid(context, item.id);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.payments_outlined,
+                    color: AppTheme.partial,
+                  ),
+                  title: const Text('Record partial payment'),
+                  subtitle: const Text('Keep remaining amount pending'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _recordPartialPayment(context, item);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _recordPartialPayment(
+    BuildContext context,
+    PaymentReceivable item,
+  ) async {
+    final appController = context.read<AppController>();
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Partial Payment'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                helperText: 'Pending ${CurrencyFormatter.nepali(item.amount)}',
+              ),
+              validator: (value) {
+                final parsed = double.tryParse(value?.trim() ?? '');
+                if (parsed == null || parsed <= 0) return 'Enter valid amount';
+                if (parsed >= item.amount) {
+                  return 'Use full payment option for complete amount';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                Navigator.of(
+                  dialogContext,
+                ).pop(double.parse(controller.text.trim()));
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (amount == null) return;
+
+    try {
+      await appController.recordPartialPayment(item.id, amount);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        this.context,
+      ).showSnackBar(const SnackBar(content: Text('Partial payment recorded')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(this.context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Bad state: ', '')),
+        ),
+      );
+    }
   }
 
   void _remindAll(BuildContext context, int total) {

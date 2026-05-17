@@ -22,7 +22,10 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final monthLabel = 'May 2026';
+    final monthLabel = snapshot.currentMonthLabel;
+    final collectionRate = snapshot.monthlyExpectedRevenue <= 0
+        ? 0
+        : (snapshot.collectedRevenue / snapshot.monthlyExpectedRevenue) * 100;
 
     return SafeArea(
       bottom: false,
@@ -86,10 +89,10 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 22),
                 GlassHeaderCard(
                   eyebrow: monthLabel,
-                  title: CurrencyFormatter.nepali(snapshot.currentRevenue),
+                  title: CurrencyFormatter.nepali(snapshot.collectedRevenue),
                   subtitle:
-                      'Monthly inflow across ${snapshot.properties.length} properties',
-                  badge: '${(snapshot.occupancyRate * 100).round()}% occupied',
+                      'Collected this month across ${snapshot.totalHouses} houses',
+                  badge: '${collectionRate.toStringAsFixed(0)}% collected',
                   icon: Icons.insights_rounded,
                   accent: const LinearGradient(
                     colors: [AppTheme.primary, AppTheme.primaryContainer],
@@ -102,9 +105,9 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: MetricTile(
-                        label: 'Outstanding',
+                        label: 'Pending Revenue',
                         value: CurrencyFormatter.nepali(
-                          snapshot.totalOutstanding,
+                          snapshot.pendingRevenue,
                         ),
                         tone: AppTheme.due,
                         icon: Icons.priority_high_rounded,
@@ -127,10 +130,12 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: MetricTile(
-                        label: 'Due Today',
-                        value: '${snapshot.dueRooms} rooms',
+                        label: 'Electricity Dues',
+                        value: CurrencyFormatter.nepali(
+                          snapshot.electricityDues,
+                        ),
                         tone: AppTheme.partial,
-                        icon: Icons.schedule_rounded,
+                        icon: Icons.bolt_rounded,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -161,8 +166,8 @@ class DashboardScreen extends StatelessWidget {
                 }),
                 const SizedBox(height: 12),
                 const SectionHeading(
-                  title: 'Operations',
-                  actionLabel: 'Offline modules',
+                  title: 'Modules',
+                  actionLabel: 'Offline ready',
                 ),
                 const SizedBox(height: 16),
                 _QuickActionCard(

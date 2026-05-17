@@ -185,6 +185,8 @@ class SeedData {
       MonthlyRevenuePoint(month: 'MAY', amount: 40120),
       MonthlyRevenuePoint(month: 'JUN', amount: 41780),
     ],
+    billingCycles: const [],
+    payments: const [],
     utilityUsage: const [
       UtilityUsage(
         propertyName: 'Skyline Residences',
@@ -357,7 +359,7 @@ class SeedData {
     preferences: const AppPreferences(
       currencyCode: 'NPR',
       reminderDay: 5,
-      landlordName: 'Aarav',
+      landlordName: 'Raymond',
     ),
   );
 }

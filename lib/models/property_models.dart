@@ -51,6 +51,9 @@ class Room {
     required this.tenantName,
     required this.dueDay,
     required this.monthlyRent,
+    this.electricityRate = 12,
+    this.waterCost = 50,
+    this.internetCost = 500,
     required this.status,
     required this.note,
   });
@@ -61,6 +64,9 @@ class Room {
   final String tenantName;
   final int dueDay;
   final double monthlyRent;
+  final double electricityRate;
+  final double waterCost;
+  final double internetCost;
   final PaymentStatus status;
   final String note;
 }
@@ -72,6 +78,7 @@ class TenantProfile {
     required this.propertyId,
     required this.name,
     required this.phone,
+    this.citizenshipNo = '',
     required this.moveInDate,
     required this.emergencyContact,
   });
@@ -81,6 +88,7 @@ class TenantProfile {
   final String propertyId;
   final String name;
   final String phone;
+  final String citizenshipNo;
   final DateTime moveInDate;
   final String emergencyContact;
 }
@@ -107,6 +115,74 @@ class PaymentReceivable {
   final String overdueLabel;
   final List<String> tags;
   final PaymentStatus status;
+}
+
+enum BillingCycleStatus { pending, partial, paid, overdue }
+
+class BillingCycle {
+  const BillingCycle({
+    required this.id,
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.tenantId,
+    required this.tenantName,
+    required this.cycleYear,
+    required this.cycleMonth,
+    required this.rentDue,
+    required this.electricityDue,
+    required this.internetDue,
+    required this.utilityDue,
+    required this.totalDue,
+    required this.totalPaid,
+    required this.status,
+    required this.dueDate,
+    required this.generatedAt,
+    required this.closedAt,
+  });
+
+  final String id;
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String tenantId;
+  final String tenantName;
+  final int cycleYear;
+  final int cycleMonth;
+  final double rentDue;
+  final double electricityDue;
+  final double internetDue;
+  final double utilityDue;
+  final double totalDue;
+  final double totalPaid;
+  final BillingCycleStatus status;
+  final DateTime dueDate;
+  final DateTime generatedAt;
+  final DateTime? closedAt;
+}
+
+class PaymentRecord {
+  const PaymentRecord({
+    required this.id,
+    required this.billingCycleId,
+    required this.tenantId,
+    required this.amount,
+    required this.method,
+    required this.note,
+    required this.isPartial,
+    required this.paidAt,
+  });
+
+  final String id;
+  final String billingCycleId;
+  final String tenantId;
+  final double amount;
+  final String method;
+  final String note;
+  final bool isPartial;
+  final DateTime paidAt;
 }
 
 class MonthlyRevenuePoint {
@@ -158,6 +234,40 @@ class UtilityRecord {
   final String note;
   final String? imagePath;
   final DateTime recordedAt;
+}
+
+class ElectricityReading {
+  const ElectricityReading({
+    required this.id,
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.tenantName,
+    required this.previousReading,
+    required this.currentReading,
+    required this.unitsConsumed,
+    required this.rate,
+    required this.totalCost,
+    required this.recordedAt,
+    required this.imagePath,
+    required this.note,
+  });
+
+  final String id;
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String tenantName;
+  final double previousReading;
+  final double currentReading;
+  final double unitsConsumed;
+  final double rate;
+  final double totalCost;
+  final DateTime recordedAt;
+  final String? imagePath;
+  final String note;
 }
 
 class DocumentRecord {
@@ -217,23 +327,35 @@ class PropertyDraft {
 }
 
 class RoomDraft {
-  const RoomDraft({
+  RoomDraft({
     this.id,
     required this.propertyId,
     required this.label,
     required this.tenantName,
+    this.tenantPhone = '',
+    this.citizenshipNo = '',
+    DateTime? moveInDate,
     required this.dueDay,
     required this.monthlyRent,
+    this.electricityRate = 12,
+    this.waterCost = 50,
+    this.internetCost = 500,
     required this.status,
     required this.note,
-  });
+  }) : moveInDate = moveInDate ?? DateTime.now();
 
   final String? id;
   final String propertyId;
   final String label;
   final String tenantName;
+  final String tenantPhone;
+  final String citizenshipNo;
+  final DateTime moveInDate;
   final int dueDay;
   final double monthlyRent;
+  final double electricityRate;
+  final double waterCost;
+  final double internetCost;
   final PaymentStatus status;
   final String note;
 }
@@ -263,6 +385,32 @@ class UtilityRecordDraft {
   final double amount;
   final String note;
   final String? imagePath;
+  final DateTime recordedAt;
+}
+
+class ElectricityReadingDraft {
+  const ElectricityReadingDraft({
+    required this.propertyId,
+    required this.propertyName,
+    required this.roomId,
+    required this.roomLabel,
+    required this.tenantName,
+    required this.currentReading,
+    required this.rate,
+    required this.imagePath,
+    required this.note,
+    required this.recordedAt,
+  });
+
+  final String propertyId;
+  final String propertyName;
+  final String roomId;
+  final String roomLabel;
+  final String tenantName;
+  final double currentReading;
+  final double rate;
+  final String? imagePath;
+  final String note;
   final DateTime recordedAt;
 }
 

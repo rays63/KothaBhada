@@ -1,0 +1,29 @@
+import 'package:flutter/material.dart';
+
+class StatusBadge extends StatelessWidget {
+  const StatusBadge({
+    super.key,
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: foreground, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}

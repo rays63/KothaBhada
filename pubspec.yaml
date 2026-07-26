@@ -30,20 +30,34 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  google_fonts: ^6.3.1
-  provider: ^6.1.5+1
+  # State management (Riverpod).
+  flutter_riverpod: ^2.6.1
   sqflite: ^2.4.2+1
   image_picker: ^1.2.2
   intl: ^0.20.2
   path_provider: ^2.1.5
+  path: ^1.9.0
+  # Design/feature packages required by the v2 design & PRD.
+  local_auth: ^2.3.0
+  flutter_secure_storage: ^9.2.4
+  crypto: ^3.0.6
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.1
+  fl_chart: ^0.69.2
+  file_picker: ^8.1.7
+  share_plus: ^10.1.4
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -58,10 +72,34 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # Generate localized strings (AppLocalizations) from lib/l10n/*.arb.
+  generate: true
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Bundled fonts (variable) so typography works fully offline — no runtime
+  # Google Fonts fetch. Manrope = display/headings, Inter = body/labels.
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+
+# App icon generation. Save the icon to assets/icon/icon.png (1024×1024),
+# then run:  dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/icon.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 23
+  adaptive_icon_background: "#12A66E"
+  adaptive_icon_foreground: "assets/icon/icon.png"
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,0 +1,11 @@
+# Copy this file to android/key.properties and fill in your upload keystore.
+# key.properties is git-ignored — never commit real signing secrets.
+#
+# Create a keystore with:
+#   keytool -genkey -v -keystore ~/kothabhada-upload.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+storePassword=changeit
+keyPassword=changeit
+keyAlias=upload
+storeFile=/absolute/path/to/kothabhada-upload.jks

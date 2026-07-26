@@ -28,6 +28,10 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # image_picker pulls in DKPhotoGallery (Swift), which imports SDWebImage.
+  # SDWebImage must generate a module map to be importable from a Swift static
+  # library, otherwise `pod install` fails validation.
+  pod 'SDWebImage', :modular_headers => true
   target 'RunnerTests' do
     inherit! :search_paths
   end
